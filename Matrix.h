@@ -2,6 +2,7 @@
 #define MATRIX_CLAUDE
 
 #include <cassert>
+#include <cstdlib>
 
 class Matrix
 {
