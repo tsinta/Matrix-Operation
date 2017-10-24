@@ -35,7 +35,7 @@ public:
     Matrix& operator*=(const double d);
     
     double det() const;
-    Matrix inv(bool *nonSingular = NULL) const;
+    Matrix inv() const;
     
     void show();
 private:

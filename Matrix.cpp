@@ -253,14 +253,11 @@ double Matrix::det() const
     return prod;
 }
 
-Matrix Matrix::inv(bool *nonSingular) const
+Matrix Matrix::inv() const
 {
     assert(r == c);
-    if (r == 0) {
-        if (nonSingular)
-            *nonSingular = false;
+    if (r == 0)
         return Matrix();
-    }
     Matrix lm = Matrix(*this), rm = eye(r);
     for (unsigned i = 0; i < r; ++i) {
         unsigned check = i;
@@ -268,11 +265,8 @@ Matrix Matrix::inv(bool *nonSingular) const
             if (fabs(lm.e[check][i]) >= mat_TOL)
                 break;
         }
-        if (check == r) {
-            if (nonSingular)
-                *nonSingular = false;
+        if (check == r)
             return Matrix();
-        }
         if (check != i) {
             lm.rowSwap(i, check);
             rm.rowSwap(i, check);
@@ -283,8 +277,6 @@ Matrix Matrix::inv(bool *nonSingular) const
             rm.rowOpt(i, d, j);
         }
     }
-    if (nonSingular)
-        *nonSingular = true;
     return rm;
 }
 
