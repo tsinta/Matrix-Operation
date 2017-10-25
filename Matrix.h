@@ -4,6 +4,8 @@
 #include <cassert>
 #include <cstdlib>
 
+enum {ROW, COL};
+
 class Matrix
 {
 public:
@@ -13,9 +15,12 @@ public:
     ~Matrix();
     
     bool empty() const {return e == NULL || r == 0 || c == 0;}
-    Matrix sub(const unsigned r1, const unsigned r2, const unsigned c1, const unsigned c2); //sub matrix :r1 <= r < r2; c1 <= c < c2
+    Matrix sub(const unsigned r1, const unsigned r2, const unsigned c1, const unsigned c2); //sub matrix : r1 <= r < r2; c1 <= c < c2
     void dim(unsigned &r, unsigned &c) const { r = this->r; c = this->c; }
+    unsigned dim(const int type = ROW) const { return (type == COL) ? c : r; }
     void changeDim(const unsigned r, const unsigned c);
+    void erase(const unsigned start, const unsigned end, const int mType = ROW);  //erase : start= < (r or c) < end
+    void insert(const unsigned pos, const Matrix &m, const int mType = ROW); //insert m before row(column) pos
     
     Matrix& operator=(const Matrix &m);
     double*& operator[](const unsigned idx) const

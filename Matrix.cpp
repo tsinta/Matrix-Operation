@@ -30,13 +30,14 @@ Matrix::Matrix(const unsigned r, const unsigned c): r(r), c(c)
         }
     }
     else {
+        this->r = this->c = 0;
         e = NULL;
     }
 }
 
 void Matrix::copyMatrix(const Matrix &m)
 {
-    if ((r = m.r) && (c = m.c)) {
+    if (r && c) {
         const unsigned s = sizeof(double*) * r + sizeof(double) * r * c;
         e = (double**)malloc(s);
         memcpy(e, m.e, s);
@@ -44,11 +45,13 @@ void Matrix::copyMatrix(const Matrix &m)
         for (unsigned i = 0; i < r; ++i, p += c)
             e[i] = p;
     }
-    else
+    else {
+        r = c = 0;
         e = NULL;
+    }
 }
 
-Matrix::Matrix(const Matrix &m)
+Matrix::Matrix(const Matrix &m): r(m.r), c(m.c)
 {
 #ifdef mat_DEBUG
     std::cout << "copy con: " << this << "\n";
@@ -61,7 +64,7 @@ Matrix::Matrix(const double *arr, const unsigned r, const unsigned c): r(r), c(c
 #ifdef mat_DEBUG
     std::cout << "con double*: " << this << "\n";
 #endif
-    if ((this->r = r) && (this->c = c)) {
+    if (r && c) {
         const int s = sizeof(double*) * r + sizeof(double) * r * c;
         e = (double**)malloc(s);
         double *p = (double*)&e[r];
@@ -71,8 +74,10 @@ Matrix::Matrix(const double *arr, const unsigned r, const unsigned c): r(r), c(c
                 e[i][j] = arr[i * c + j];
         }
     }
-    else
+    else {
+        this->r = this->c = 0;
         e = NULL;
+    }
 }
 
 Matrix::~Matrix()
@@ -101,6 +106,7 @@ void Matrix::changeDim(const unsigned r, const unsigned c)
         this->r = this->c = 0;
         if (e)
             free(e);
+        e = NULL;
         return;
     }
     const int s = sizeof(double*) * r + sizeof(double) * r * c;
@@ -108,13 +114,90 @@ void Matrix::changeDim(const unsigned r, const unsigned c)
     double *p = (double*)&new_e[r];
     for (unsigned i = 0; i < r; ++i, p += c) {
         new_e[i] = p;
-        for (unsigned j = 0; j < c; ++j)
-            new_e[i][j] = (i < this->r && j < this->c) ? e[i][j] : 0.0;
+        if (i < this->r) {
+            memcpy(new_e[i], e[i], sizeof(double) * ((c < this->c) ? c : this->c));
+            if (c > this->c)
+                memset(&new_e[i][this->c], 0, sizeof(double) * (c - this->c));
+        }
+        else
+            memset(new_e[i], 0, sizeof(double) * c);
+        
     }
     free(e);
     e = new_e;
     this->r = r;
     this->c = c;
+}
+
+void Matrix::erase(const unsigned start, const unsigned end, const int mType)
+{
+    assert(start <= end && ((mType == ROW && end <= r) || (mType == COL && end <= c)));
+    if (start == end)
+        return;
+    if (start == 0 && ((mType == ROW && end == r) || (mType == COL && end == c))) {
+        this->r = this->c = 0;
+        if (e)
+            free(e);
+        e = NULL;
+        return;
+    }
+    const unsigned new_r = (mType == ROW) ? r - (end - start) : r;
+    const unsigned new_c = (mType == COL) ? c - (end - start) : c;
+    double **new_e = (double**)malloc(sizeof(double*) * new_r + sizeof(double) * new_r * new_c);
+    double *p = (double*)&new_e[new_r];
+    for (unsigned i = 0; i < new_r; ++i, p += new_c) {
+        new_e[i] = p;
+        if (mType == ROW) {
+            if (i < start)
+                memcpy(new_e[i], e[i], sizeof(double) * new_c);
+            else
+                memcpy(new_e[i], e[i + end - start], sizeof(double) * new_c);
+        }
+        else {
+            memcpy(new_e[i], e[i], sizeof(double) * start);
+            memcpy(&new_e[i][start], &e[i][end], sizeof(double) * (c - end));
+        }
+    }
+    free(e);
+    e = new_e;
+    r = new_r;
+    c = new_c;
+}
+
+void Matrix::insert(const unsigned pos, const Matrix &m, const int mType)
+{
+    if (e == NULL && pos == 0) {
+        *this = Matrix(m);
+        return;
+    }
+    assert((mType == ROW && pos <= r) || (mType == COL && pos <= c));
+    if (m.empty())
+        return;
+    assert((mType == ROW && m.dim(COL) == c) || (mType == COL && m.dim(ROW) == r));
+    const unsigned new_r = (mType == ROW) ? r + m.dim(ROW) : r;
+    const unsigned new_c = (mType == COL) ? c + m.dim(COL) : c;
+    double **new_e = (double**)malloc(sizeof(double*) * new_r + sizeof(double) * new_r * new_c);
+    double *p = (double*)&new_e[new_r];
+    for (unsigned i = 0; i < new_r; ++i, p += new_c) {
+        new_e[i] = p;
+        if (mType == ROW) {
+            if (i < pos)
+                memcpy(new_e[i], e[i], sizeof(double) * new_c);
+            else if (pos <= i && i < pos + m.dim(ROW))
+                memcpy(new_e[i], m.e[i - pos], sizeof(double) * new_c);
+            else
+                memcpy(new_e[i], e[i - m.dim(ROW)], sizeof(double) * new_c);
+        }
+        else {
+            memcpy(new_e[i], e[i], sizeof(double) * pos);
+            memcpy(&new_e[i][pos], m.e[i], sizeof(double) * m.dim(COL));
+            memcpy(&new_e[i][pos + m.dim(COL)], &e[i][pos], sizeof(double) * (c - pos));
+        }
+    }
+    free(e);
+    e = new_e;
+    r = new_r;
+    c = new_c;
 }
 
 Matrix& Matrix::operator=(const Matrix &m)
@@ -124,6 +207,8 @@ Matrix& Matrix::operator=(const Matrix &m)
 #endif
     if (e)
         free(e);
+    r = m.r;
+    c = m.c;
     copyMatrix(m);
     return *this;
 }

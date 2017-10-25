@@ -35,4 +35,16 @@ int main()
     //c*inv_c
     cout << "c*inv_c\n";
     (Mc * inv_c).show();
+    
+    //insert & erase
+    double d[2][2] = {{1, 2}, {3, 4}};
+    double e[2] = {5, 6};
+    Matrix Md((double*)d, 2, 2), Me(e, 1, 2);
+    Md.insert(1, Me, ROW);
+    cout << "Insert\n";
+    Md.show();
+    
+    Md.erase(0, 1, COL);
+    cout << "Erase\n";
+    Md.show();
 }
