@@ -11,7 +11,7 @@ class Matrix
 public:
     Matrix(const unsigned r = 0, const unsigned c = 0);
     Matrix(const Matrix &m);
-    Matrix(const double *arr, const unsigned r = 0, const unsigned c = 0);
+    Matrix(const double* const arr, const unsigned r = 0, const unsigned c = 0);
     ~Matrix();
     
     bool empty() const {return e == NULL || r == 0 || c == 0;}
@@ -21,6 +21,8 @@ public:
     void changeDim(const unsigned r, const unsigned c);
     void erase(const unsigned start, const unsigned end, const int mType = ROW);  //erase : start= < (r or c) < end
     void insert(const unsigned pos, const Matrix &m, const int mType = ROW); //insert m before row(column) pos
+    void opt(const unsigned pv, const double d, const unsigned tg, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);
+    void swap(const unsigned s1, const unsigned s2, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);
     
     Matrix& operator=(const Matrix &m);
     double*& operator[](const unsigned idx) const
@@ -48,8 +50,10 @@ private:
     double **e;
     unsigned r, c;
     void copyMatrix(const Matrix &m);
-    void rowOpt(const unsigned pv, const double d, const unsigned tg, const unsigned startC = 0);  //row tg += row pv * d
-    void rowSwap(const unsigned r1, const unsigned r2);
+    void rowOpt(const unsigned pv, const double d, const unsigned tg, const unsigned startC = 0, unsigned endC = UINT_MAX);  //row tg += row pv * d
+    void rowSwap(const unsigned r1, const unsigned r2, const unsigned startC = 0, unsigned endC = UINT_MAX);
+    void colOpt(const unsigned pv, const double d, const unsigned tg, const unsigned startR = 0, unsigned endR = UINT_MAX);  //col tg += col pv * d
+    void colSwap(const unsigned c1, const unsigned c2, const unsigned startR = 0, unsigned endR = UINT_MAX);
 };
 
 Matrix operator+(const Matrix &lhs, const Matrix &rhs);

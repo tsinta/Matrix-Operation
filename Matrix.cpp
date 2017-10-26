@@ -59,7 +59,7 @@ Matrix::Matrix(const Matrix &m): r(m.r), c(m.c)
     copyMatrix(m);
 }
 
-Matrix::Matrix(const double *arr, const unsigned r, const unsigned c): r(r), c(c)
+Matrix::Matrix(const double* const arr, const unsigned r, const unsigned c): r(r), c(c)
 {
 #ifdef mat_DEBUG
     std::cout << "con double*: " << this << "\n";
@@ -166,16 +166,18 @@ void Matrix::erase(const unsigned start, const unsigned end, const int mType)
 
 void Matrix::insert(const unsigned pos, const Matrix &m, const int mType)
 {
+    assert((mType == ROW && pos <= r) || (mType == COL && pos <= c));
+    if (m.empty())
+        return;
     if (e == NULL && pos == 0) {
         *this = Matrix(m);
         return;
     }
-    assert((mType == ROW && pos <= r) || (mType == COL && pos <= c));
-    if (m.empty())
-        return;
-    assert((mType == ROW && m.dim(COL) == c) || (mType == COL && m.dim(ROW) == r));
-    const unsigned new_r = (mType == ROW) ? r + m.dim(ROW) : r;
-    const unsigned new_c = (mType == COL) ? c + m.dim(COL) : c;
+    unsigned ci, ri;
+    m.dim(ri, ci);
+    assert((mType == ROW && ci == c) || (mType == COL && ri == r));
+    const unsigned new_r = (mType == ROW) ? r + ri : r;
+    const unsigned new_c = (mType == COL) ? c + ci : c;
     double **new_e = (double**)malloc(sizeof(double*) * new_r + sizeof(double) * new_r * new_c);
     double *p = (double*)&new_e[new_r];
     for (unsigned i = 0; i < new_r; ++i, p += new_c) {
@@ -183,21 +185,39 @@ void Matrix::insert(const unsigned pos, const Matrix &m, const int mType)
         if (mType == ROW) {
             if (i < pos)
                 memcpy(new_e[i], e[i], sizeof(double) * new_c);
-            else if (pos <= i && i < pos + m.dim(ROW))
+            else if (pos <= i && i < pos + ri)
                 memcpy(new_e[i], m.e[i - pos], sizeof(double) * new_c);
             else
-                memcpy(new_e[i], e[i - m.dim(ROW)], sizeof(double) * new_c);
+                memcpy(new_e[i], e[i - ri], sizeof(double) * new_c);
         }
         else {
             memcpy(new_e[i], e[i], sizeof(double) * pos);
-            memcpy(&new_e[i][pos], m.e[i], sizeof(double) * m.dim(COL));
-            memcpy(&new_e[i][pos + m.dim(COL)], &e[i][pos], sizeof(double) * (c - pos));
+            memcpy(&new_e[i][pos], m.e[i], sizeof(double) * ci);
+            memcpy(&new_e[i][pos + ci], &e[i][pos], sizeof(double) * (c - pos));
         }
     }
     free(e);
     e = new_e;
     r = new_r;
     c = new_c;
+}
+
+void Matrix::opt(const unsigned pv, const double d, const unsigned tg, const int mType, const unsigned start, const unsigned end)
+{
+    assert(mType == ROW || mType == COL);
+    if (mType == ROW)
+        rowOpt(pv, d, tg, start, end);
+    else
+        colOpt(pv, d, tg, start, end);
+}
+
+void Matrix::swap(const unsigned s1, const unsigned s2, const int mType, const unsigned start, const unsigned end)
+{
+    assert(mType == ROW || mType == COL);
+    if (mType == ROW)
+        rowSwap(s1, s2, start, end);
+    else
+        colSwap(s1, s2, start, end);
 }
 
 Matrix& Matrix::operator=(const Matrix &m)
@@ -290,25 +310,55 @@ Matrix& Matrix::operator*=(const double d)
     return *this;
 }
 
-void Matrix::rowOpt(const unsigned pv, const double d, const unsigned tg, const unsigned startC)
+void Matrix::rowOpt(const unsigned pv, const double d, const unsigned tg, const unsigned startC, unsigned endC)
 {
-    assert(pv < r && tg < r);
-    double *pvRow = (double*)malloc(sizeof(double) * c);
-    memcpy(pvRow, e[pv], sizeof(double) * c);
-    for (unsigned j = startC; j < c; ++j)
-        e[tg][j] += pvRow[j] * d;
-    free(pvRow);
+    assert(pv < r && tg < r && startC <= c);
+    if (endC == UINT_MAX)
+        endC = c;
+    assert(endC <= c);
+    for (unsigned j = startC; j < endC; ++j)
+        e[tg][j] += e[pv][j] * d;
 }
 
-void Matrix::rowSwap(const unsigned r1, const unsigned r2)
+void Matrix::rowSwap(const unsigned r1, const unsigned r2, const unsigned startC, unsigned endC)
 {
-     assert(r2 < r && r1 < r);
-     const unsigned sizeC = sizeof(double) * c;
-     double *bufRow = (double*)malloc(sizeC);
-     memcpy(bufRow, e[r1], sizeC);
-     memcpy(e[r1], e[r2], sizeC);
-     memcpy(e[r2], bufRow, sizeC);
-     free(bufRow);
+    assert(r1 < r && r2 < r && startC <= c);
+    if (endC == UINT_MAX)
+        endC = c;
+    assert(endC <= c);
+    if (r1 == r2)
+        return;
+    const unsigned sizeC = sizeof(double) * (endC - startC);
+    double *bufRow = (double*)malloc(sizeC);
+    memcpy(bufRow, &e[r1][startC], sizeC);
+    memcpy(&e[r1][startC], &e[r2][startC], sizeC);
+    memcpy(&e[r2][startC], bufRow, sizeC);
+    free(bufRow);
+}
+
+void Matrix::colOpt(const unsigned pv, const double d, const unsigned tg, const unsigned startR, unsigned endR)
+{
+    assert(pv < c && tg < c && startR <= r);
+    if (endR == UINT_MAX)
+        endR = r;
+    assert(endR <= r);
+    for (unsigned i = 0; i < r; ++i)
+        e[i][tg] += e[i][pv] * d;
+}
+
+void Matrix::colSwap(const unsigned c1, const unsigned c2, const unsigned startR, unsigned endR)
+{
+    assert(c1 < c && c2 < c && startR <= r);
+    if (endR == UINT_MAX)
+        endR = r;
+    assert(endR <= r);
+    if (c1 == c2)
+        return;
+    for (unsigned i = startR; i < endR; ++i) {
+        const double d = e[i][c1];
+        e[i][c1] = e[i][c2];
+        e[i][c2] = d;
+    }
 }
 
 double Matrix::det() const

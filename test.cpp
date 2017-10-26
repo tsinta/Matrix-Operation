@@ -15,18 +15,23 @@ int main()
     double b[2][3] = {{1, 5, 3}, {6 ,4, 2}};
     Matrix Ma((double*)a, 3, 2), Mb((double*)b, 2, 3);
     Matrix Mc;
-    Mc = Ma * Mb;
     cout << "a*b=\n";
+    Mc = Ma * Mb;
     Mc.show();
     
     cout << "c*5=\n";
     Mc = Mc * 5;
     Mc.show();
     
+    //Transpose
+    cout << "Transpose c\n";
+    Mc.t().show();
+    
     Mc[2][2] = 1;
-    cout << "Determinant\n";
     //Determinant
+    cout << "Determinant\n";
     cout << "det = " << Mc.det() << endl;
+    
     //Inverse
     cout << "Inverse\n";
     Matrix inv_c = Mc.inv();
