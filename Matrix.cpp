@@ -14,9 +14,9 @@
                            }
 
 //#define mat_DEBUG
-const double mat_TOL = 0.0000001;
+const double mat_TOL = 0.0000000001;
 
-Matrix::Matrix(const unsigned r, const unsigned c): r(r), c(c)
+Matrix::Matrix(const unsigned r, const unsigned c, const double d): r(r), c(c), ip(0)
 {
 #ifdef mat_DEBUG
     std::cout << "con: " << this << "\n";
@@ -26,7 +26,12 @@ Matrix::Matrix(const unsigned r, const unsigned c): r(r), c(c)
         double *p = (double*)&e[r];
         for (unsigned i = 0; i < r; ++i, p += c) {
             e[i] = p;
-            memset(e[i], 0, sizeof(double) * c);
+            if (fabs(d) < mat_TOL)
+                memset(e[i], 0, sizeof(double) * c);
+            else {
+                for (unsigned j = 0; j < c; ++j)
+                    e[i][j] = d;
+            }
         }
     }
     else {
@@ -51,7 +56,7 @@ void Matrix::copyMatrix(const Matrix &m)
     }
 }
 
-Matrix::Matrix(const Matrix &m): r(m.r), c(m.c)
+Matrix::Matrix(const Matrix &m): r(m.r), c(m.c), ip(0)
 {
 #ifdef mat_DEBUG
     std::cout << "copy con: " << this << "\n";
@@ -59,7 +64,7 @@ Matrix::Matrix(const Matrix &m): r(m.r), c(m.c)
     copyMatrix(m);
 }
 
-Matrix::Matrix(const double* const arr, const unsigned r, const unsigned c): r(r), c(c)
+Matrix::Matrix(const double* const arr, const unsigned r, const unsigned c): r(r), c(c), ip(0)
 {
 #ifdef mat_DEBUG
     std::cout << "con double*: " << this << "\n";
@@ -220,6 +225,20 @@ void Matrix::swap(const unsigned s1, const unsigned s2, const int mType, const u
         colSwap(s1, s2, start, end);
 }
 
+Matrix& Matrix::operator<<(const double d)
+{
+    e[ip / c][ip % c] = d;
+    ++ip;
+    return *this;
+}
+
+Matrix& Matrix::operator<<(const double *d)
+{
+    for (unsigned i = 0; ip < r * c; ++ip, ++i)
+        e[ip / c][ip % c] = d[i];
+    return *this;
+}
+
 Matrix& Matrix::operator=(const Matrix &m)
 {
 #ifdef mat_DEBUG
@@ -246,7 +265,7 @@ Matrix Matrix::t() const
     return m;
 }
 
-Matrix& Matrix::operator+=(const Matrix &m)
+const Matrix& Matrix::operator+=(const Matrix &m)
 {
 #ifdef mat_DEBUG
     std::cout << "operator +=: " << this << "\n";
@@ -256,7 +275,7 @@ Matrix& Matrix::operator+=(const Matrix &m)
     return *this;
 }
 
-Matrix& Matrix::operator+=(const double d)
+const Matrix& Matrix::operator+=(const double d)
 {
 #ifdef mat_DEBUG
     std::cout << "operator += double: " << this << "\n";
@@ -265,7 +284,7 @@ Matrix& Matrix::operator+=(const double d)
     return *this;
 }
 
-Matrix& Matrix::operator-=(const Matrix &m)
+const Matrix& Matrix::operator-=(const Matrix &m)
 {
 #ifdef mat_DEBUG
     std::cout << "operator -=: " << this << "\n";
@@ -275,7 +294,7 @@ Matrix& Matrix::operator-=(const Matrix &m)
     return *this;
 }
 
-Matrix& Matrix::operator-=(const double d)
+const Matrix& Matrix::operator-=(const double d)
 {
 #ifdef mat_DEBUG
     std::cout << "operator -= double: " << this << "\n";
@@ -284,7 +303,7 @@ Matrix& Matrix::operator-=(const double d)
     return *this;
 }
 
-Matrix& Matrix::operator*=(const Matrix &m)
+const Matrix& Matrix::operator*=(const Matrix &m)
 {
 #ifdef mat_DEBUG
     std::cout << "operator *=: " << this << "\n";
@@ -297,16 +316,24 @@ Matrix& Matrix::operator*=(const Matrix &m)
                 mulM[i][j] += e[i][p] * m.e[p][j];
         }
     }
-    *this = mulM;
-    return *this;
+    return *this = mulM;
 }
 
-Matrix& Matrix::operator*=(const double d)
+const Matrix& Matrix::operator*=(const double d)
 {
 #ifdef mat_DEBUG
     std::cout << "operator *= double: " << this << "\n";
 #endif
     MATSCAOPT(e, *=, d);
+    return *this;
+}
+
+const Matrix& Matrix::operator/=(const double d)
+{
+#ifdef mat_DEBUG
+    std::cout << "operator /= double: " << this << "\n";
+#endif
+    MATSCAOPT(e, /=, d);
     return *this;
 }
 
@@ -414,7 +441,7 @@ Matrix Matrix::inv() const
     return rm;
 }
 
-void Matrix::show()
+void Matrix::show() const
 {
     for (unsigned i = 0; i < r; ++i) {
         for (unsigned j = 0; j < c; ++j)
@@ -482,7 +509,10 @@ Matrix operator-(const double d, const Matrix &rhs)
 #ifdef mat_DEBUG
     std::cout << "operator -: " << d << ", " << &rhs << "\n";
 #endif
-    return -Matrix(rhs) += d;
+    unsigned r, c;
+    rhs.dim(r, c);
+    Matrix minusM(r, c, d);
+    return minusM -= rhs;
 }
 
 Matrix operator*(const Matrix &lhs, const double d)
@@ -523,10 +553,118 @@ Matrix operator*(const Matrix &lhs, const Matrix &rhs)
     return Matrix(lhs) *= rhs;
 }
 
+Matrix operator/(const Matrix &lhs, const double d)
+{
+#ifdef mat_DEBUG
+    std::cout << "operator /: " << &lhs << ", " << d << "\n";
+#endif
+    return Matrix(lhs) /= d;
+}
+
+Matrix operator/(const double d, const Matrix &rhs)
+{
+#ifdef mat_DEBUG
+    std::cout << "operator /: " << d << ", " << &rhs << "\n";
+#endif
+    unsigned r, c;
+    rhs.dim(r, c);
+    Matrix divM(r, c, d);
+    MATMATOPT(divM, /=, rhs);
+    return divM;
+}
+
+Matrix dotDiv(const Matrix &lhs, const Matrix &rhs)
+{
+#ifdef mat_DEBUG
+    std::cout << "ewd: " << &lhs << ", " << &rhs << "\n";
+#endif
+    Matrix m(lhs);
+    unsigned r, c, rr, cr;
+    lhs.dim(r, c);
+    rhs.dim(rr, cr);
+    assert(r == rr && c == cr);
+    MATMATOPT(m, /=, rhs);
+    return m;
+}
+
 Matrix eye(const unsigned s)
 {
     Matrix m(s, s);
     for (unsigned i = 0; i < s; ++i)
         m[i][i] = 1.0;
     return m;
+}
+
+//Solve linear equations
+
+Matrix conjgrad(const Matrix &a, const Matrix &b, Matrix x, unsigned maxIter)
+{
+    if (x.empty())
+        x = Matrix(b.dim(ROW), 1);
+    assert(a.dim(COL) == b.dim(ROW) && b.dim(ROW) == x.dim(ROW) && b.dim(COL) == 1 && x.dim(COL) == 1);
+    Matrix r = b - a * x;
+    Matrix p = r;
+    double rsold = (r.t() * r)[0][0];
+    for (unsigned i = 0; i < maxIter; ++i) {
+        const Matrix ap = a * p;
+        const double alpha = rsold / (p.t() * ap)[0][0];
+        x += alpha * p;
+        r -= alpha * ap;
+        const double rsnew = (r.t() * r)[0][0];
+        if (sqrt(rsnew) < mat_TOL)
+            break;
+        p = r + (rsnew / rsold) * p;
+        rsold = rsnew;
+    }
+    return x;
+}
+
+static double loss(const Matrix &a, const Matrix &b, const Matrix &x)
+{
+    //loss = 1/2 * sum((ax - b).^2)
+    Matrix m = a * x - b;
+    m = dot(m, m);
+    double sum = 0.0;
+    for (unsigned i = 0; i < m.dim(ROW); ++i)
+        sum += m[i][0];
+    return sum / 2.0;
+}
+
+static Matrix gradient(const Matrix &a, const Matrix &b, const Matrix &x)
+{
+    //gradient j = sum(aij * (ai * x - yi)
+    const unsigned r = a.dim(ROW), c = a.dim(COL);
+    const Matrix ax_b = a * x - b;
+    Matrix grad(c, 1);
+    for (unsigned j = 0; j < c; ++j)
+        for (unsigned i = 0; i < r; ++i)
+            grad[j][0] += a[i][j] * ax_b[i][0];
+    return grad;
+}
+
+Matrix graddesc(const Matrix &a, const Matrix &b, Matrix x, unsigned maxIter)
+{
+    if (x.empty())
+        x = Matrix(b.dim(ROW), 1);
+    assert(a.dim(COL) == b.dim(ROW) && b.dim(ROW) == x.dim(ROW) && b.dim(COL) == 1 && x.dim(COL) == 1);
+    double alpha = 1.0;
+    double lossOld = loss(a, b, x);
+    for (unsigned i = 0; i < maxIter; ++i) {
+        const Matrix xNew = x - alpha * gradient(a, b, x);
+        const double lossNew = loss(a, b, xNew);
+        if (fabs(lossOld - lossNew) < mat_TOL * mat_TOL || lossOld < mat_TOL * mat_TOL) {
+            //std::cout << i << std::endl;
+            break;
+        }
+        /*if (i % 10000 == 0 || i < 100) {
+            std::cout << i << ":" << lossNew << ";" << lossOld << ";" << alpha << std::endl;
+        }*/
+        if (lossOld > lossNew) {
+            lossOld = lossNew;
+            x = xNew;
+        }
+        else
+            alpha *= 0.95;
+    }
+    return x;
 }
