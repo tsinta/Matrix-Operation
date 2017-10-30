@@ -1,6 +1,7 @@
 #include "Matrix.h"
 #include <iostream>
 
+using namespace MatOpt;
 using namespace std;
 
 int main()
@@ -34,7 +35,7 @@ int main()
     
     //Inverse
     cout << "Inverse\n";
-    Matrix inv_c = Mc.inv();
+    Matrix inv_c = inv(Mc);
     inv_c.show();
     
     //c*inv_c
