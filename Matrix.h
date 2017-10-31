@@ -16,7 +16,7 @@ namespace MatOpt
         Matrix(const Matrix &m);
         Matrix(const double* const arr, const unsigned r = 0, const unsigned c = 0);
         ~Matrix();
-        
+
         bool empty() const {return e == NULL || r == 0 || c == 0;}
         Matrix sub(const unsigned r1, const unsigned r2, const unsigned c1, const unsigned c2) const; //sub matrix : r1 <= r < r2; c1 <= c < c2
         void dim(unsigned &r, unsigned &c) const { r = this->r; c = this->c; }
@@ -26,7 +26,7 @@ namespace MatOpt
         void insert(const unsigned pos, const Matrix &m, const int mType = ROW);    //insert m before row(column) pos
         void opt(const unsigned pv, const double d, const unsigned tg, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);
         void swap(const unsigned s1, const unsigned s2, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);
-        
+
         Matrix& operator<<(const double d);
         Matrix& operator<<(const double *d);
         void reset(unsigned p = 0)  //for operator<<
@@ -39,23 +39,23 @@ namespace MatOpt
             assert(idx < r);
             return e[idx];
         }
-        
+
         Matrix t() const;
-        
+
         const Matrix& operator+=(const Matrix &m);
         const Matrix& operator+=(const double d);
-        
+
         const Matrix& operator-=(const Matrix &m);
         const Matrix& operator-=(const double d);
-        
+
         const Matrix& operator*=(const Matrix &m);
         const Matrix& operator*=(const double d);
-        
+
         const Matrix& operator/=(const double d);
-        
+
         double det() const;
         friend Matrix inv(Matrix m);
-        
+
         void show() const;
     private:
         double **e;

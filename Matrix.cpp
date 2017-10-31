@@ -229,6 +229,7 @@ namespace MatOpt
 
     Matrix& Matrix::operator<<(const double d)
     {
+        assert(ip < r * c);
         e[ip / c][ip % c] = d;
         ++ip;
         return *this;
@@ -236,6 +237,7 @@ namespace MatOpt
 
     Matrix& Matrix::operator<<(const double *d)
     {
+        assert(ip < r * c);
         for (unsigned i = 0; ip < r * c; ++ip, ++i)
             e[ip / c][ip % c] = d[i];
         return *this;
@@ -687,13 +689,13 @@ namespace MatOpt
         assert(mType == ROW || mType == COL);
         if (m.empty())
             return Matrix();
-        return sum(m, mType) / ((mType == ROW) ? m.dim(COL) : m.dim(ROW));
+        return sum(m, mType) / (double)((mType == ROW) ? m.dim(COL) : m.dim(ROW));
     }
 
     double meanValue(const Matrix &m)
     {
         assert(!m.empty());
-        return sumValue(m) / (m.dim(COL) * m.dim(ROW));
+        return sumValue(m) / (double)(m.dim(COL) * m.dim(ROW));
     }
 
     Matrix var(const Matrix &m, const int mType)
