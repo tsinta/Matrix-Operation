@@ -564,6 +564,16 @@ namespace MatOpt
         return m;
     }
 
+    Matrix reshape(const Matrix &m, const unsigned r, const unsigned c)
+    {
+        Matrix reM(r, c);
+        if (!m.empty() && r > 0 && c > 0) {
+            const unsigned length = (r * c < m.dim(ROW) * m.dim(COL)) ? r *c : m.dim(ROW) * m.dim(COL);
+            memcpy(reM[0], m[0], sizeof(double) * length);
+        }
+        return reM;
+    }
+
     Matrix msqrt(Matrix m)
     {
         const unsigned r = m.dim(ROW), c = m.dim(COL);

@@ -87,6 +87,7 @@ namespace MatOpt
     Matrix operator/(const double d, const Matrix &rhs);
     Matrix dotDiv(const Matrix &lhs, const Matrix &rhs);    //Element-Wise Division
 
+    Matrix reshape(const Matrix &m, const unsigned r, const unsigned c);
     Matrix msqrt(Matrix m);
     Matrix mabs(const Matrix &m);
     Matrix eye(const unsigned s);   //identity matrix
