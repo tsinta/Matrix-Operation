@@ -53,7 +53,7 @@ namespace MatOpt
 
         const Matrix& operator/=(const double d);
 
-        double det() const;
+        friend double det(Matrix m);
         friend Matrix inv(Matrix m);
 
         void show() const;
@@ -91,7 +91,8 @@ namespace MatOpt
     Matrix msqrt(Matrix m);
     Matrix mabs(const Matrix &m);
     Matrix eye(const unsigned s);   //identity matrix
-    Matrix inv(Matrix lm);   //inverse matrix
+    double det(Matrix m);   //determinant
+    Matrix inv(Matrix m);  //inverse matrix
 
     Matrix max(const Matrix &m, const int mType = ROW);
     double maxValue(const Matrix &m);
@@ -109,7 +110,9 @@ namespace MatOpt
 
     //Solve linear equations
     Matrix conjgrad(const Matrix &a, const Matrix &b, Matrix x = Matrix(), unsigned maxIter = 1000000); //solve ax = b; a must be symmetric and positive definite
+    Matrix bicgstab(const Matrix &a, const Matrix &b, Matrix x = Matrix(), unsigned maxIter = 1000000); //biconjugate gradient stabilized method
     Matrix graddesc(const Matrix &a, const Matrix &b, Matrix x = Matrix(), unsigned maxIter = 1000000); //solve ax = b; not promise to find the correct answer
+    Matrix adamgraddesc(const Matrix &a, const Matrix &b, Matrix x = Matrix(), unsigned maxIter = 1000000);
 
 }
 

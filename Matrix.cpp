@@ -392,32 +392,6 @@ namespace MatOpt
         }
     }
 
-    double Matrix::det() const
-    {
-        assert(r == c);
-        if (r == 0)
-            return 0.0;
-        Matrix m(*this);
-        double prod = 1.0;
-        for (unsigned i = 0; i < r; ++i) {
-            unsigned check = i;
-            for (; check < r; ++check) {
-                if (fabs(m.e[check][i]) >= mat_TOL)
-                    break;
-            }
-            if (check == r)
-                return 0.0;
-            if (check != i) {
-                m.rowSwap(i, check);
-                prod = -prod;
-            }
-            for (unsigned j = i + 1; j < r; ++j)
-                m.rowOpt(i, -m.e[j][i] / m.e[i][i], j, i);
-            prod *= m.e[i][i];
-        }
-        return prod;
-    }
-
     void Matrix::show() const
     {
         for (unsigned i = 0; i < r; ++i) {
@@ -603,27 +577,52 @@ namespace MatOpt
         return m;
     }
 
-    Matrix inv(Matrix lm)
+    double det(Matrix m)
     {
-        assert(lm.r == lm.c);
-        if (lm.r == 0)
-            return Matrix();
-        Matrix rm = eye(lm.r);
-        for (unsigned i = 0; i < lm.r; ++i) {
+        assert(m.r == m.c);
+        if (m.r == 0)
+            return 0.0;
+        double prod = 1.0;
+        for (unsigned i = 0; i < m.r; ++i) {
             unsigned check = i;
-            for (; check < lm.r; ++check) {
-                if (fabs(lm.e[check][i]) >= mat_TOL)
+            for (; check < m.r; ++check) {
+                if (fabs(m.e[check][i]) >= mat_TOL)
                     break;
             }
-            if (check == lm.r)
+            if (check == m.r)
+                return 0.0;
+            if (check != i) {
+                m.rowSwap(i, check);
+                prod = -prod;
+            }
+            for (unsigned j = i + 1; j < m.r; ++j)
+                m.rowOpt(i, -m.e[j][i] / m.e[i][i], j, i);
+            prod *= m.e[i][i];
+        }
+        return prod;
+    }
+
+    Matrix inv(Matrix m)
+    {
+        assert(m.r == m.c);
+        if (m.r == 0)
+            return Matrix();
+        Matrix rm = eye(m.r);
+        for (unsigned i = 0; i < m.r; ++i) {
+            unsigned check = i;
+            for (; check < m.r; ++check) {
+                if (fabs(m.e[check][i]) >= mat_TOL)
+                    break;
+            }
+            if (check == m.r)
                 return Matrix();
             if (check != i) {
-                lm.rowSwap(i, check);
+                m.rowSwap(i, check);
                 rm.rowSwap(i, check);
             }
-            for (unsigned j = 0; j < lm.r; ++j) {
-                const double d = ((i != j) ? -lm.e[j][i]: (1.0 - lm.e[i][i])) / lm.e[i][i];
-                lm.rowOpt(i, d, j, i);
+            for (unsigned j = 0; j < m.r; ++j) {
+                const double d = ((i != j) ? -m.e[j][i]: (1.0 - m.e[i][i])) / m.e[i][i];
+                m.rowOpt(i, d, j, i);
                 rm.rowOpt(i, d, j);
             }
         }
@@ -750,8 +749,10 @@ namespace MatOpt
             x += alpha * p;
             r -= alpha * ap;
             const double rsnew = (r.t() * r)[0][0];
-            if (sqrt(rsnew) < mat_TOL)
+            if (sqrt(rsnew) < mat_TOL) {
+                //std::cout << i << std::endl;
                 break;
+            }
             p = r + (rsnew / rsold) * p;
             rsold = rsnew;
         }
@@ -778,6 +779,39 @@ namespace MatOpt
         return grad;
     }
 
+    Matrix bicgstab(const Matrix &a, const Matrix &b, Matrix x, unsigned maxIter)
+    {
+        if (x.empty())
+            x = Matrix(b.dim(ROW), 1);
+        assert(a.dim(COL) == b.dim(ROW) && b.dim(ROW) == x.dim(ROW) && b.dim(COL) == 1 && x.dim(COL) == 1);
+        Matrix r = b - a * x;
+        Matrix r0 = r;
+        double rho = 1.0, alpha = 1.0, w = 1.0;
+        Matrix v(b.dim(ROW), 1), p(b.dim(ROW), 1);
+        double lossOld = loss(a, b, x);
+        for (unsigned i = 0; i < maxIter; ++i) {
+            const double rhoNew = sumValue(dot(r0, r));
+            double beta = rho * w;
+            beta = (fabs(beta) >= mat_TOL) ? rhoNew * alpha / beta : rhoNew * alpha / mat_TOL;
+            rho = rhoNew;
+            p = r + beta * (p - w * v);
+            v = a * p;
+            alpha = rho / sumValue(dot(r0, v));
+            const Matrix s = r - alpha * v;
+            const Matrix t = a * s;
+            w = sumValue(dot(t, s)) / sumValue(dot(t, t));
+            x += alpha * p + w * s;
+            const double lossNew = loss(a, b, x);
+            if (fabs(lossOld - lossNew) < mat_TOL * mat_TOL || lossNew < mat_TOL * mat_TOL) {
+                //std::cout << i << std::endl;
+                break;
+            }
+            r = s - w * t;
+            lossOld = lossNew;
+        }
+        return x;
+    }
+
     Matrix graddesc(const Matrix &a, const Matrix &b, Matrix x, unsigned maxIter)
     {
         if (x.empty())
@@ -801,6 +835,38 @@ namespace MatOpt
             }
             else
                 alpha *= 0.95;
+        }
+        return x;
+    }
+
+    Matrix adamgraddesc(const Matrix &a, const Matrix &b, Matrix x, unsigned maxIter)
+    {
+        if (x.empty())
+            x = Matrix(b.dim(ROW), 1);
+        assert(a.dim(COL) == b.dim(ROW) && b.dim(ROW) == x.dim(ROW) && b.dim(COL) == 1 && x.dim(COL) == 1);
+        double alpha = 0.001;
+        double beta1 = 0.9, beta2 = 0.999;  //Exponential decay rates for the moment estimates
+        double beta1t = beta1, beta2t = beta2;
+        Matrix m(b.dim(ROW), 1);    //Initialize 1st moment vector
+        Matrix v(b.dim(ROW), 1);    //Initialize 2nd moment vector
+        double lossOld = loss(a, b, x);
+        for (unsigned i = 0; i < maxIter; ++i) {
+            Matrix g = gradient(a, b, x);   //Get gradients w.r.t. stochastic objective at timestep t
+            m = beta1 * m + (1.0 - beta1) * g;  //Update biased first moment estimate
+            v = beta2 * v + (1.0 - beta2) * dot(g, g);  //Update biased second raw moment estimate
+            const Matrix _m = m / (1 - beta1t);  //Compute bias-corrected first moment estimate
+            double _v = sqrt(sumValue(v / (1 - beta2t)));  //Compute bias-corrected second raw moment estimate
+            beta1t *= beta1;
+            beta2t *= beta2;
+            if (_v < mat_TOL)
+                _v = mat_TOL;
+            x -= alpha * _m / _v;   //Update parameters
+            const double lossNew = loss(a, b, x);
+            if (fabs(lossOld - lossNew) < mat_TOL * mat_TOL || lossNew < mat_TOL * mat_TOL) {
+                //std::cout << i << std::endl;
+                break;
+            }
+            lossOld = lossNew;
         }
         return x;
     }

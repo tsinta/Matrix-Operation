@@ -31,7 +31,7 @@ int main()
     Mc[2][2] = 1;
     //Determinant
     cout << "Determinant\n";
-    cout << "det = " << Mc.det() << endl;
+    cout << "det = " << det(Mc) << endl;
     
     //Inverse
     cout << "Inverse\n";
