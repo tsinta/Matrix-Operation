@@ -596,7 +596,7 @@ namespace MatOpt
                 prod = -prod;
             }
             for (unsigned j = i + 1; j < m.r; ++j)
-                m.rowOpt(i, -m.e[j][i] / m.e[i][i], j, i);
+                m.rowOpt(i, -m.e[j][i] / m.e[i][i], j, i + 1);
             prod *= m.e[i][i];
         }
         return prod;
@@ -622,7 +622,8 @@ namespace MatOpt
             }
             for (unsigned j = 0; j < m.r; ++j) {
                 const double d = ((i != j) ? -m.e[j][i]: (1.0 - m.e[i][i])) / m.e[i][i];
-                m.rowOpt(i, d, j, i);
+                m.e[j][i] = (i != j) ? 0.0 : 1.0;
+                m.rowOpt(i, d, j, i + 1);
                 rm.rowOpt(i, d, j);
             }
         }
