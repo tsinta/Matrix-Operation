@@ -584,15 +584,15 @@ namespace MatOpt
             return 0.0;
         double prod = 1.0;
         for (unsigned i = 0; i < m.r; ++i) {
-            unsigned check = i;
-            for (; check < m.r; ++check) {
-                if (fabs(m.e[check][i]) >= mat_TOL)
-                    break;
+            unsigned pivot = i;
+            for (unsigned check = i + 1; check < m.r; ++check) {
+                if (fabs(m.e[check][i]) > fabs(m.e[pivot][i]))
+                    pivot = check;
             }
-            if (check == m.r)
+            if (fabs(m.e[pivot][i]) < mat_TOL)
                 return 0.0;
-            if (check != i) {
-                m.rowSwap(i, check);
+            if (pivot != i) {
+                m.rowSwap(i, pivot);
                 prod = -prod;
             }
             for (unsigned j = i + 1; j < m.r; ++j)
@@ -609,20 +609,28 @@ namespace MatOpt
             return Matrix();
         Matrix rm = eye(m.r);
         for (unsigned i = 0; i < m.r; ++i) {
-            unsigned check = i;
-            for (; check < m.r; ++check) {
-                if (fabs(m.e[check][i]) >= mat_TOL)
-                    break;
+            unsigned pivot = i;
+            for (unsigned check = i + 1; check < m.r; ++check) {
+                if (fabs(m.e[check][i]) > fabs(m.e[pivot][i]))
+                    pivot = check;
             }
-            if (check == m.r)
+            if (fabs(m.e[pivot][i]) < mat_TOL)
                 return Matrix();
-            if (check != i) {
-                m.rowSwap(i, check);
-                rm.rowSwap(i, check);
+            if (pivot != i) {
+                m.rowSwap(i, pivot);
+                rm.rowSwap(i, pivot);
+            }
+            {
+                const double dp = (1.0 - m.e[i][i]) / m.e[i][i];
+                m.e[i][i] = 1.0;
+                m.rowOpt(i, dp, i, i + 1);
+                rm.rowOpt(i, dp, i);
             }
             for (unsigned j = 0; j < m.r; ++j) {
-                const double d = ((i != j) ? -m.e[j][i]: (1.0 - m.e[i][i])) / m.e[i][i];
-                m.e[j][i] = (i != j) ? 0.0 : 1.0;
+                if (i == j)
+                    continue;
+                const double d = -m.e[j][i];
+                m.e[j][i] = 0.0;
                 m.rowOpt(i, d, j, i + 1);
                 rm.rowOpt(i, d, j);
             }
