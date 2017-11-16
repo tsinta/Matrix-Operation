@@ -24,17 +24,22 @@ namespace MatOpt
         std::cout << "con: " << this << "\n";
     #endif
         if (r && c) {
-            e = (double**)malloc(sizeof(double*) * r + sizeof(double) * r * c);
+            const unsigned sc = sizeof(double) * c;
+            e = (double**)malloc((sizeof(double*) + sc) * r);
             double *p = (double*)&e[r];
             for (unsigned i = 0; i < r; ++i, p += c) {
                 e[i] = p;
-                if (fabs(d) < mat_TOL)
-                    memset(e[i], 0, sizeof(double) * c);
-                else {
-                    for (unsigned j = 0; j < c; ++j)
-                        e[i][j] = d;
+                if (fabs(d) >= mat_TOL) {
+                    if (i == 0) {
+                        for (unsigned j = 0; j < c; ++j)
+                            e[i][j] = d;
+                    }
+                    else
+                        memcpy(e[i], e[0], sc);
                 }
             }
+            if (fabs(d) < mat_TOL)
+                memset(e[0], 0, sc * r);
         }
         else {
             this->r = this->c = 0;
@@ -45,12 +50,12 @@ namespace MatOpt
     void Matrix::copyMatrix(const Matrix &m)
     {
         if (r && c) {
-            const unsigned s = sizeof(double*) * r + sizeof(double) * r * c;
+            const unsigned s = (sizeof(double*) + sizeof(double) * c) * r;
             e = (double**)malloc(s);
             memcpy(e, m.e, s);
             double *p = (double*)&e[r];
             for (unsigned i = 0; i < r; ++i, p += c)
-                e[i] = p;
+                e[i] = p;   //reset e[i] to new address
         }
         else {
             r = c = 0;
@@ -72,14 +77,11 @@ namespace MatOpt
         std::cout << "con double*: " << this << "\n";
     #endif
         if (r && c) {
-            const int s = sizeof(double*) * r + sizeof(double) * r * c;
-            e = (double**)malloc(s);
+            e = (double**)malloc((sizeof(double*) + sizeof(double) * c) * r);
             double *p = (double*)&e[r];
-            for (unsigned i = 0; i < r; ++i, p += c) {
+            for (unsigned i = 0; i < r; ++i, p += c)
                 e[i] = p;
-                for (unsigned j = 0; j < c; ++j)
-                    e[i][j] = arr[i * c + j];
-            }
+            memcpy(e[0], &arr[0], sizeof(double) * r * c);
         }
         else {
             this->r = this->c = 0;
@@ -116,7 +118,7 @@ namespace MatOpt
             e = NULL;
             return;
         }
-        const int s = sizeof(double*) * r + sizeof(double) * r * c;
+        const int s = (sizeof(double*) + sizeof(double) * c) * r;
         double **new_e = (double**)malloc(s);
         double *p = (double*)&new_e[r];
         for (unsigned i = 0; i < r; ++i, p += c) {
@@ -124,10 +126,10 @@ namespace MatOpt
             if (i < this->r) {
                 memcpy(new_e[i], e[i], sizeof(double) * ((c < this->c) ? c : this->c));
                 if (c > this->c)
-                    memset(&new_e[i][this->c], 0, sizeof(double) * (c - this->c));
+                    memset(&new_e[i][this->c], 0, sizeof(double) * (c - this->c));  //set additional column to 0
             }
             else
-                memset(new_e[i], 0, sizeof(double) * c);
+                memset(new_e[i], 0, sizeof(double) * c);    //set additional row to 0
             
         }
         free(e);
@@ -150,7 +152,7 @@ namespace MatOpt
         }
         const unsigned new_r = (mType == ROW) ? r - (end - start) : r;
         const unsigned new_c = (mType == COL) ? c - (end - start) : c;
-        double **new_e = (double**)malloc(sizeof(double*) * new_r + sizeof(double) * new_r * new_c);
+        double **new_e = (double**)malloc((sizeof(double*) + sizeof(double) * new_c) * new_r);
         double *p = (double*)&new_e[new_r];
         for (unsigned i = 0; i < new_r; ++i, p += new_c) {
             new_e[i] = p;

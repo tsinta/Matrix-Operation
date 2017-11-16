@@ -18,14 +18,14 @@ namespace MatOpt
         ~Matrix();
 
         bool empty() const {return e == NULL || r == 0 || c == 0;}
-        Matrix sub(const unsigned r1, const unsigned r2, const unsigned c1, const unsigned c2) const; //sub matrix : r1 <= r < r2; c1 <= c < c2
-        void dim(unsigned &r, unsigned &c) const { r = this->r; c = this->c; }
+        Matrix sub(const unsigned r1, const unsigned r2, const unsigned c1, const unsigned c2) const;   //sub matrix : r1 <= r < r2; c1 <= c < c2
+        void dim(unsigned &r, unsigned &c) const { r = this->r; c = this->c; }  //get dimension
         unsigned dim(const int type = ROW) const { return (type == COL) ? c : r; }
         void changeDim(const unsigned r, const unsigned c);
         void erase(const unsigned start, const unsigned end, const int mType = ROW);    //erase : start= < (r or c) < end
         void insert(const unsigned pos, const Matrix &m, const int mType = ROW);    //insert m before row(column) pos
-        void opt(const unsigned pv, const double d, const unsigned tg, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);
-        void swap(const unsigned s1, const unsigned s2, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);
+        void opt(const unsigned pv, const double d, const unsigned tg, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX); //row(column) operation
+        void swap(const unsigned s1, const unsigned s2, const int mType = ROW, const unsigned start = 0, const unsigned end = UINT_MAX);    //swap two row(column)
 
         Matrix& operator<<(const double d);
         Matrix& operator<<(const double *d);
@@ -40,7 +40,7 @@ namespace MatOpt
             return e[idx];
         }
 
-        Matrix t() const;
+        Matrix t() const;   //transpose
 
         const Matrix& operator+=(const Matrix &m);
         const Matrix& operator+=(const double d);
@@ -92,7 +92,7 @@ namespace MatOpt
     Matrix mabs(const Matrix &m);
     Matrix eye(const unsigned s);   //identity matrix
     double det(Matrix m);   //determinant
-    Matrix inv(Matrix m);  //inverse matrix
+    Matrix inv(Matrix m);   //inverse matrix
 
     Matrix max(const Matrix &m, const int mType = ROW);
     double maxValue(const Matrix &m);
