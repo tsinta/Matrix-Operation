@@ -39,6 +39,11 @@ namespace MatOpt
             assert(idx < r);
             return e[idx];
         }
+        double at(const unsigned idx) const
+        {
+            assert(idx < r * c);
+            return e[0][idx];
+        }
 
         Matrix t() const;   //transpose
 
